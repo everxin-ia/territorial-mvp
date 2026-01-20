@@ -10,6 +10,7 @@ from app.db.models import Base, Tenant, Source, AlertRule, Territory
 from app.services.ingest.pipeline import ingest_sources
 from app.services.risk.compute import compute_risk_snapshots
 from app.services.alerts.engine import run_alerts
+from app.data.chile_territories import CHILE_TERRITORIES
 
 scheduler = BackgroundScheduler(timezone="UTC")
 
@@ -24,29 +25,42 @@ def seed_demo(db: Session) -> None:
         db.add(tenant)
         db.commit()
 
-    # Territories demo (Chile principales)
+    # Territories - Todas las regiones, comunas y localidades de Chile
     if db.query(Territory).filter(Territory.tenant_id==1).count() == 0:
-        demo_territories = [
-            {"name": "Santiago", "level": "región", "lat": -33.4489, "lon": -70.6693, "aliases": ["Región Metropolitana", "RM", "Stgo"]},
-            {"name": "Valparaíso", "level": "región", "lat": -33.0472, "lon": -71.6127, "aliases": ["Quinta Región", "V Región"]},
-            {"name": "Antofagasta", "level": "región", "lat": -23.6509, "lon": -70.3975, "aliases": ["Segunda Región", "II Región"]},
-            {"name": "Concepción", "level": "ciudad", "lat": -36.8270, "lon": -73.0498, "aliases": ["Conce", "Región del Biobío"]},
-            {"name": "La Serena", "level": "ciudad", "lat": -29.9027, "lon": -71.2519, "aliases": ["Cuarta Región", "IV Región"]},
-            {"name": "Temuco", "level": "ciudad", "lat": -38.7359, "lon": -72.5904, "aliases": ["Araucanía", "IX Región"]},
-            {"name": "Iquique", "level": "ciudad", "lat": -20.2307, "lon": -70.1355, "aliases": ["Tarapacá", "I Región"]},
-            {"name": "Puerto Montt", "level": "ciudad", "lat": -41.4693, "lon": -72.9424, "aliases": ["Los Lagos", "X Región"]},
-        ]
-        for terr_data in demo_territories:
-            db.add(Territory(
+        print("Seeding Chile territories (16 regiones + 346 comunas)...")
+
+        for region_data in CHILE_TERRITORIES:
+            # Insertar región
+            region = Territory(
                 tenant_id=1,
-                name=terr_data["name"],
-                level=terr_data["level"],
-                latitude=terr_data["lat"],
-                longitude=terr_data["lon"],
-                aliases_json=json.dumps(terr_data["aliases"], ensure_ascii=False),
-                enabled=True
-            ))
+                name=region_data["name"],
+                level=region_data["level"],
+                latitude=region_data["lat"],
+                longitude=region_data["lon"],
+                aliases_json=json.dumps(region_data["aliases"], ensure_ascii=False),
+                enabled=True,
+                parent_id=None  # Regiones no tienen parent
+            )
+            db.add(region)
+            db.flush()  # Flush para obtener el ID sin commit
+
+            # Insertar comunas de esta región
+            if "comunas" in region_data:
+                for comuna_data in region_data["comunas"]:
+                    comuna = Territory(
+                        tenant_id=1,
+                        name=comuna_data["name"],
+                        level="comuna",
+                        latitude=comuna_data["lat"],
+                        longitude=comuna_data["lon"],
+                        aliases_json=json.dumps(comuna_data.get("aliases", []), ensure_ascii=False),
+                        enabled=True,
+                        parent_id=region.id  # Comuna tiene como parent a la región
+                    )
+                    db.add(comuna)
+
         db.commit()
+        print(f"✓ Seeded {db.query(Territory).filter(Territory.tenant_id==1).count()} territories")
 
     # Sources (RSS demo)
     if db.query(Source).filter(Source.tenant_id==1).count() == 0:
@@ -58,11 +72,13 @@ def seed_demo(db: Session) -> None:
         for name, url, weight, credibility in demo_sources:
             db.add(Source(tenant_id=1, name=name, url=url, type="rss", weight=weight, credibility_score=credibility, enabled=True))
         db.commit()
+        print(f"✓ Seeded {len(demo_sources)} RSS sources")
 
     # Alert rule
     if db.query(AlertRule).filter(AlertRule.tenant_id==1).count() == 0:
         db.add(AlertRule(tenant_id=1, name="Riesgo alto (demo)", min_prob=0.65, min_confidence=0.45, enabled=True))
         db.commit()
+        print("✓ Seeded alert rules")
 
 def job_ingest():
     db = SessionLocal()
