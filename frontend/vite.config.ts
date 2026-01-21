@@ -4,22 +4,34 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
     proxy: {
+      // API Backend (local dev sin docker)
       "/signals": {
-        target: "http://backend:8000",
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
       "/alerts": {
-        target: "http://backend:8000",
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
       "/territories": {
-        target: "http://backend:8000",
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
-      "/rules": {
-        target: "http://backend:8000",
+      "/alert-rules": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/export": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/health": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/debug": {
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
     },

@@ -1,68 +1,76 @@
 from __future__ import annotations
-from sqlalchemy.orm import Session
+
+import asyncio
+import json
+
 from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
 from app.db.models import Source, Signal, SignalTopic, SignalTerritory
 from app.services.ingest.rss import fetch_rss
+from app.services.ingest.simhash_dedup import compute_simhash, is_near_duplicate
+from app.services.nlp.ai_geosparsing import AIGeoparser, geoparse_with_ai
+from app.services.nlp.sentiment import analyze_sentiment
 from app.services.nlp.topics import topic_scores
 from app.services.nlp.territories import match_territories
 from app.services.nlp.territories_advanced import match_territories_db
-from app.services.nlp.sentiment import analyze_sentiment
-from app.services.ingest.simhash_dedup import compute_simhash, is_near_duplicate
-from app.services.nlp.ai_geosparsing import geoparse_with_ai
-import asyncio
-import json
-import os
+
 
 def ingest_sources(db: Session, tenant_id: int) -> int:
     sources = db.execute(
-        select(Source).where(Source.tenant_id==tenant_id, Source.enabled==True)
+        select(Source).where(Source.tenant_id ==
+                             tenant_id, Source.enabled == True)
     ).scalars().all()
 
     inserted = 0
+
+    # Reutilizamos una sola instancia (para heurística + IA)
+    geoparser = AIGeoparser()
+
     for src in sources:
         if src.type != "rss":
             continue
 
         items = fetch_rss(src.url)
-        for it in items:
-            text = f"{it['title']} {it['content']}"
 
-            # Calcular simhash para near-duplicate detection
+        for it in items:
+            title = it.get("title") or ""
+            content = it.get("content") or ""
+            url = it.get("url")  # <- IMPORTANTE para country gate
+
+            text = f"{title} {content}"
+
+            # Deduplicación rápida
             simhash_val = compute_simhash(text)
 
-            # Verificar near-duplicates (últimos 100 signals)
             recent_signals = db.execute(
                 select(Signal)
-                .where(Signal.tenant_id==tenant_id)
+                .where(Signal.tenant_id == tenant_id)
                 .order_by(Signal.captured_at.desc())
-                .limit(100)
+                .limit(150)
             ).scalars().all()
 
-            is_duplicate = False
-            for recent in recent_signals:
-                if recent.simhash and is_near_duplicate(simhash_val, recent.simhash, threshold=3):
-                    is_duplicate = True
-                    break
+            if any(s.simhash and is_near_duplicate(simhash_val, s.simhash, threshold=3) for s in recent_signals):
+                continue
 
-            if is_duplicate:
-                continue  # Skip near-duplicates
-
-            # Sentiment analysis
+            # Sentiment
             sentiment = analyze_sentiment(text)
 
-            # upsert by unique hash constraint
+            # Insertar señal
             sig = Signal(
                 tenant_id=tenant_id,
                 source_id=src.id,
-                title=it["title"],
-                url=it["url"],
-                content=it["content"],
-                published_at=it["published_at"],
-                hash=it["hash"],
+                title=title,
+                url=url,
+                content=content,
+                published_at=it.get("published_at"),
+                hash=it.get("hash"),
                 simhash=simhash_val,
                 sentiment_score=sentiment["score"],
                 sentiment_label=sentiment["label"],
             )
+
             try:
                 db.add(sig)
                 db.commit()
@@ -72,83 +80,126 @@ def ingest_sources(db: Session, tenant_id: int) -> int:
 
             inserted += 1
 
-            # NLP topics
+            # Topics
             for t in topic_scores(text):
-                db.add(SignalTopic(signal_id=sig.id, topic=t["topic"], score=t["score"], method=t["method"]))
+                db.add(
+                    SignalTopic(
+                        signal_id=sig.id,
+                        topic=t["topic"],
+                        score=t["score"],
+                        method=t.get("method", "heuristic"),
+                    )
+                )
 
-            # Territories - usar IA si está configurada, sino fallback
-            ai_enabled = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+            db.commit()
 
+            # ------------------------------------------------------------------
+            # TERRITORIES: Chile-only robusto
+            # ------------------------------------------------------------------
+
+            # 1) Country gate primero (MUY IMPORTANTE)
+            #    Si NO parece Chile -> NO asignar territorios (ni IA ni fallback).
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    is_chile = loop.run_until_complete(
+                        geoparser.is_chile_related(title, content, url=url)
+                    )
+                finally:
+                    loop.close()
+            except Exception:
+                is_chile = False
+
+            if not is_chile:
+                # No agregamos SignalTerritory
+                db.commit()
+                continue
+
+            # 2) Si es Chile: intentamos IA primero (pasando url)
+            ai_enabled = bool(settings.openai_api_key)  # MVP: openai
             if ai_enabled:
                 try:
-                    # Usar geosparsing con IA (trazabilidad completa)
-                    # Ejecutar de forma síncrona
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                     try:
-                        source_region = getattr(src, 'region', None)  # Si la fuente tiene región asociada
-                        ai_matches = loop.run_until_complete(
-                            geoparse_with_ai(it["title"], it["content"], source_region=source_region)
-                        )
+                        source_region = getattr(src, "region", None)
 
-                        # Guardar con trazabilidad completa
-                        for match in ai_matches:
-                            db.add(SignalTerritory(
-                                signal_id=sig.id,
-                                territory=match["territory_name"],
-                                level=match["territory_level"],
-                                confidence=match["relevance_score"],
-                                # Trazabilidad
-                                detected_toponym=match["detected_toponym"],
-                                toponym_position=match["toponym_position"],
-                                toponym_context=match["toponym_context"],
-                                relevance_score=match["relevance_score"],
-                                scoring_breakdown_json=json.dumps(match["scoring_breakdown"]),
-                                mapping_method=match["mapping_method"],
-                                disambiguation_reason=match["disambiguation_reason"],
-                                ai_provider=match["ai_provider"],
-                                latitude=match["latitude"],
-                                longitude=match["longitude"]
-                            ))
+                        ai_matches = loop.run_until_complete(
+                            geoparse_with_ai(
+                                title,
+                                content,
+                                source_region=source_region,
+                                url=url,  # <- IMPORTANTE
+                            )
+                        )
                     finally:
                         loop.close()
+
+                    # Si IA devolvió territorios, los guardamos.
+                    if ai_matches:
+                        for match in ai_matches:
+                            db.add(
+                                SignalTerritory(
+                                    signal_id=sig.id,
+                                    territory=match["territory_name"],
+                                    level=match["territory_level"],
+                                    confidence=float(match["relevance_score"]),
+                                    # trazabilidad (si tu modelo tiene estos campos)
+                                    detected_toponym=match.get(
+                                        "detected_toponym"),
+                                    toponym_position=match.get(
+                                        "toponym_position"),
+                                    toponym_context=match.get(
+                                        "toponym_context"),
+                                    relevance_score=float(
+                                        match.get("relevance_score", 0.0)),
+                                    scoring_breakdown_json=json.dumps(
+                                        match.get("scoring_breakdown", {})),
+                                    mapping_method=match.get("mapping_method"),
+                                    disambiguation_reason=match.get(
+                                        "disambiguation_reason"),
+                                    ai_provider=match.get("ai_provider"),
+                                    latitude=match.get("latitude"),
+                                    longitude=match.get("longitude"),
+                                )
+                            )
+
+                        db.commit()
+                        continue  # <- no usamos fallback si IA funcionó
+
+                    # Si IA devuelve [], NO inventamos territorios.
+                    db.commit()
+                    continue
+
                 except Exception as e:
-                    print(f"⚠️  Error en geosparsing con IA: {e}")
-                    # Fallback a método DB
-                    try:
-                        territories = match_territories_db(text, db, tenant_id)
-                    except Exception:
-                        territories = match_territories(text)
+                    print(
+                        f"⚠️ IA geoparse falló, usando fallback (solo Chile): {e}")
 
-                    for tr in territories:
-                        db.add(SignalTerritory(
-                            signal_id=sig.id,
-                            territory=tr["territory"],
-                            level=tr["level"],
-                            confidence=tr["confidence"],
-                            latitude=tr.get("lat"),
-                            longitude=tr.get("lon"),
-                            mapping_method="db_fallback",
-                            ai_provider="none"
-                        ))
-            else:
-                # Sin IA: usar método tradicional
-                try:
-                    territories = match_territories_db(text, db, tenant_id)
-                except Exception:
-                    territories = match_territories(text)
+            # 3) Fallback SOLO si es Chile y solo si IA falló (o no hay key)
+            #    AUN ASÍ: recomiendo subir el umbral y NO default.
+            try:
+                territories = match_territories_db(text, db, tenant_id)
+            except Exception:
+                territories = match_territories(text)
 
-                for tr in territories:
-                    db.add(SignalTerritory(
+            # Umbral mínimo (evita que el fallback meta cosas demasiado fáciles)
+            territories = [tr for tr in territories if float(
+                tr.get("confidence", 0)) >= 0.70]
+
+            for tr in territories:
+                db.add(
+                    SignalTerritory(
                         signal_id=sig.id,
                         territory=tr["territory"],
-                        level=tr["level"],
-                        confidence=tr["confidence"],
+                        level=tr.get("level", "unknown"),
+                        confidence=float(tr.get("confidence", 0.0)),
                         latitude=tr.get("lat"),
                         longitude=tr.get("lon"),
-                        mapping_method="legacy",
-                        ai_provider="none"
-                    ))
+                        mapping_method="fallback",
+                        ai_provider="none",
+                    )
+                )
 
             db.commit()
 

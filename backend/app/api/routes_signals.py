@@ -8,6 +8,7 @@ import json
 
 router = APIRouter()
 
+
 @router.get("")
 def list_signals(
     tenant_id: int = Query(1),
@@ -33,8 +34,10 @@ def list_signals(
     # lightweight enrichment
     out = []
     for s in signals:
-        topics = db.execute(select(SignalTopic).where(SignalTopic.signal_id == s.id)).scalars().all()
-        terrs = db.execute(select(SignalTerritory).where(SignalTerritory.signal_id == s.id)).scalars().all()
+        topics = db.execute(select(SignalTopic).where(
+            SignalTopic.signal_id == s.id)).scalars().all()
+        terrs = db.execute(select(SignalTerritory).where(
+            SignalTerritory.signal_id == s.id)).scalars().all()
 
         # Aplicar filtros
         if territory and not any(territory.lower() in t.territory.lower() for t in terrs):
@@ -56,13 +59,16 @@ def list_signals(
 
     return out
 
+
 @router.get("/{signal_id}")
 def get_signal(signal_id: int, db: Session = Depends(get_db)):
     s = db.get(Signal, signal_id)
     if not s:
         return {"error": "not found"}
-    topics = db.execute(select(SignalTopic).where(SignalTopic.signal_id == s.id)).scalars().all()
-    terrs = db.execute(select(SignalTerritory).where(SignalTerritory.signal_id == s.id)).scalars().all()
+    topics = db.execute(select(SignalTopic).where(
+        SignalTopic.signal_id == s.id)).scalars().all()
+    terrs = db.execute(select(SignalTerritory).where(
+        SignalTerritory.signal_id == s.id)).scalars().all()
     return {
         "id": s.id,
         "title": s.title,
@@ -93,7 +99,8 @@ def get_geosparsing_trace(signal_id: int, db: Session = Depends(get_db)):
     if not s:
         return {"error": "Signal not found"}
 
-    terrs = db.execute(select(SignalTerritory).where(SignalTerritory.signal_id == s.id)).scalars().all()
+    terrs = db.execute(select(SignalTerritory).where(
+        SignalTerritory.signal_id == s.id)).scalars().all()
 
     trace_data = {
         "signal_id": s.id,

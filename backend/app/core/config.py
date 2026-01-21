@@ -1,4 +1,13 @@
-from pydantic_settings import BaseSettings
+# app/core/config.py
+from __future__ import annotations
+
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ENV_PATH = BACKEND_ROOT / ".env"
+
 
 class Settings(BaseSettings):
     env: str = "dev"
@@ -6,15 +15,24 @@ class Settings(BaseSettings):
 
     alert_webhook_url: str | None = None
 
-    # Configuración de IA para geosparsing (opcional)
-    ai_provider: str | None = None  # "openai" o "anthropic"
+    # Scheduler / jobs
+    # DISABLE_SCHEDULER=true para evitar jobs en startup
+    disable_scheduler: bool = False
+
+    # IA
+    ai_provider: str | None = "openai"
     openai_api_key: str | None = None
-    openai_model: str | None = None
+    openai_model: str | None = "gpt-4o-mini"
+    openai_base_url: str | None = "https://api.openai.com/v1"
+
     anthropic_api_key: str | None = None
     anthropic_model: str | None = None
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_PATH) if ENV_PATH.exists() else None,
+        case_sensitive=False,
+        extra="ignore",
+    )
+
 
 settings = Settings()
