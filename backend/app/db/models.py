@@ -79,6 +79,25 @@ class SignalTerritory(Base):
     level: Mapped[str] = mapped_column(String(40), default="unknown")
     confidence: Mapped[float] = mapped_column(Float, default=0.5)
 
+    # ===== TRAZABILIDAD DE GEOSPARSING CON IA =====
+    # Topónimo original detectado
+    detected_toponym: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    toponym_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    toponym_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Scoring y explicabilidad
+    relevance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scoring_breakdown_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON con desglose de scores
+
+    # Metadata de matching
+    mapping_method: Mapped[str | None] = mapped_column(String(50), nullable=True)  # exact_match, fuzzy_match, ai_disambiguation
+    disambiguation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ai_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)  # openai, anthropic, spacy, none
+
+    # Coordenadas geográficas
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+
 class RiskSnapshot(Base):
     __tablename__ = "risk_snapshots"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

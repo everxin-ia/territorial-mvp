@@ -4,6 +4,7 @@ from sqlalchemy import select, and_
 from datetime import datetime, timezone, timedelta
 from app.db.session import get_db
 from app.db.models import Signal, SignalTopic, SignalTerritory
+import json
 
 router = APIRouter()
 
@@ -74,3 +75,74 @@ def get_signal(signal_id: int, db: Session = Depends(get_db)):
         "topics": [{"topic": t.topic, "score": t.score} for t in topics],
         "territories": [{"territory": t.territory, "level": t.level, "confidence": t.confidence} for t in terrs],
     }
+
+
+@router.get("/{signal_id}/geosparsing-trace")
+def get_geosparsing_trace(signal_id: int, db: Session = Depends(get_db)):
+    """
+    Obtiene la trazabilidad completa del geosparsing con IA para una señal
+
+    Retorna información detallada sobre:
+    - Qué topónimos se detectaron
+    - Dónde estaban en el texto
+    - Por qué se mapearon a cada territorio
+    - Scoring detallado
+    - Método de detección usado
+    """
+    s = db.get(Signal, signal_id)
+    if not s:
+        return {"error": "Signal not found"}
+
+    terrs = db.execute(select(SignalTerritory).where(SignalTerritory.signal_id == s.id)).scalars().all()
+
+    trace_data = {
+        "signal_id": s.id,
+        "signal_title": s.title,
+        "signal_url": s.url,
+        "captured_at": s.captured_at,
+        "territories_detected": [],
+        "ai_enabled": False,
+        "metadata": {
+            "total_territories": len(terrs),
+            "ai_detected_count": 0,
+            "legacy_detected_count": 0
+        }
+    }
+
+    for t in terrs:
+        territory_info = {
+            "territory_name": t.territory,
+            "territory_level": t.level,
+            "confidence": t.confidence,
+            "coordinates": {
+                "latitude": t.latitude,
+                "longitude": t.longitude
+            } if t.latitude and t.longitude else None,
+
+            # Trazabilidad
+            "detection": {
+                "detected_toponym": t.detected_toponym,
+                "position_in_text": t.toponym_position,
+                "context": t.toponym_context,
+            } if t.detected_toponym else None,
+
+            # Scoring
+            "relevance_score": t.relevance_score,
+            "scoring_breakdown": json.loads(t.scoring_breakdown_json) if t.scoring_breakdown_json else None,
+
+            # Explicabilidad
+            "mapping_method": t.mapping_method,
+            "disambiguation_reason": t.disambiguation_reason,
+            "ai_provider": t.ai_provider,
+        }
+
+        trace_data["territories_detected"].append(territory_info)
+
+        # Contar métodos
+        if t.ai_provider and t.ai_provider not in ["none", "legacy"]:
+            trace_data["ai_enabled"] = True
+            trace_data["metadata"]["ai_detected_count"] += 1
+        else:
+            trace_data["metadata"]["legacy_detected_count"] += 1
+
+    return trace_data

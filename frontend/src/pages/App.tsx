@@ -160,7 +160,7 @@ export default function App() {
                 color="red"
               />
               <Card
-                title="Territoriosaumentados"
+                title="Territorios Monitoreados"
                 value={new Set(signals.flatMap((s) => s.territories.map((t) => t.territory))).size.toString()}
               />
               <Card
