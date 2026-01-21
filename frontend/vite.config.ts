@@ -7,19 +7,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/signals": {
-        target: "http://localhost:8000",
+        target: "http://backend:8000",
         changeOrigin: true,
       },
       "/alerts": {
-        target: "http://localhost:8000",
+        target: "http://backend:8000",
         changeOrigin: true,
       },
       "/territories": {
-        target: "http://localhost:8000",
+        target: "http://backend:8000",
         changeOrigin: true,
       },
       "/rules": {
-        target: "http://localhost:8000",
+        target: "http://backend:8000",
         changeOrigin: true,
       },
     },
