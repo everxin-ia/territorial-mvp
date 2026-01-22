@@ -74,17 +74,38 @@ def seed_demo(db: Session) -> None:
         db.commit()
         print("✓ Seeded Chile territories")
 
-    # Sources (RSS demo)
+    # Sources (RSS feeds de instituciones públicas chilenas)
     if db.query(Source).filter(Source.tenant_id == 1).count() == 0:
-        demo_sources = [
-            ("Google News - conflicto territorial (ES)",
-             "https://news.google.com/rss/search?q=conflicto+territorial&hl=es-419&gl=CL&ceid=CL:es-419", 1.2, 0.7),
-            ("Google News - protesta (ES)",
-             "https://news.google.com/rss/search?q=protesta+comunidad&hl=es-419&gl=CL&ceid=CL:es-419", 1.0, 0.6),
-            ("Google News - sanción ambiental (ES)",
-             "https://news.google.com/rss/search?q=sanci%C3%B3n+ambiental&hl=es-419&gl=CL&ceid=CL:es-419", 1.3, 0.8),
+        # RSS feeds de instituciones públicas de Chile
+        chile_sources = [
+            # Instituciones gubernamentales oficiales (alta credibilidad)
+            ("Gobierno de Chile - Noticias",
+             "https://www.gob.cl/noticias/feed/rss/", 1.5, 0.95),
+            ("Biblioteca del Congreso Nacional (BCN)",
+             "https://www.bcn.cl/rss", 1.4, 0.95),
+            ("SII - Todas las noticias",
+             "https://www.sii.cl/pagina/actualizada/noticias/rss/siiall_rss.xml", 1.3, 0.90),
+            ("SII - Noticias tributarias",
+             "https://www.sii.cl/pagina/actualizada/noticias/rss/siinot_rss.xml", 1.3, 0.90),
+            ("CSIRT Nacional - Alertas de seguridad",
+             "https://csirt.gob.cl/rss/alertas", 1.4, 0.95),
+            ("Ministerio de Economía - Noticias",
+             "https://www.economia.gob.cl/category/noticias/feed", 1.2, 0.85),
+            ("Ministerio de Desarrollo Social",
+             "https://www.desarrollosocialyfamilia.gob.cl/index.php?format=feed&type=atom", 1.2, 0.85),
+
+            # Google News - Búsquedas específicas para Chile
+            ("Google News - Conflicto territorial Chile",
+             "https://news.google.com/rss/search?q=conflicto+territorial+Chile&hl=es-419&gl=CL&ceid=CL:es-419", 1.0, 0.70),
+            ("Google News - Protesta Chile",
+             "https://news.google.com/rss/search?q=protesta+Chile&hl=es-419&gl=CL&ceid=CL:es-419", 1.0, 0.65),
+            ("Google News - Sanción ambiental Chile",
+             "https://news.google.com/rss/search?q=sanción+ambiental+Chile&hl=es-419&gl=CL&ceid=CL:es-419", 1.2, 0.75),
+            ("Google News - Riesgo territorial Chile",
+             "https://news.google.com/rss/search?q=riesgo+territorial+Chile&hl=es-419&gl=CL&ceid=CL:es-419", 1.1, 0.70),
         ]
-        for name, url, weight, credibility in demo_sources:
+
+        for name, url, weight, credibility in chile_sources:
             db.add(
                 Source(
                     tenant_id=1,
@@ -97,7 +118,7 @@ def seed_demo(db: Session) -> None:
                 )
             )
         db.commit()
-        print(f"✓ Seeded {len(demo_sources)} RSS sources")
+        print(f"✓ Seeded {len(chile_sources)} RSS sources (Chile instituciones públicas)")
 
     # Alert rule
     if db.query(AlertRule).filter(AlertRule.tenant_id == 1).count() == 0:

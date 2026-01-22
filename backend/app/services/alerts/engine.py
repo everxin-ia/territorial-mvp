@@ -6,6 +6,7 @@ import json
 
 from app.db.models import AlertRule, AlertEvent, RiskSnapshot, Signal, SignalTerritory, SignalTopic
 from app.services.alerts.notify import send_webhook
+from app.core.config import settings
 
 
 def _get_evidence_signals(db: Session, tenant_id: int, territory: str, period_start: datetime, limit: int = 5) -> list[dict]:
@@ -75,6 +76,95 @@ def _get_evidence_signals(db: Session, tenant_id: int, territory: str, period_st
         })
 
     return evidence
+
+
+def _generate_ai_summary(
+    territory: str,
+    risk_prob: float,
+    confidence: float,
+    trend: str,
+    is_anomaly: bool,
+    drivers: dict,
+    evidence_signals: list[dict]
+) -> str | None:
+    """
+    Genera un resumen conciso con IA explicando por qué se considera una alerta
+
+    Returns:
+        Resumen de 2-3 oraciones o None si no hay IA disponible
+    """
+    if not settings.ai_provider or not evidence_signals:
+        return None
+
+    try:
+        # Construir contexto para la IA
+        num_signals = drivers.get("num_signals", 0)
+        avg_sentiment = drivers.get("avg_sentiment", 0)
+        top_topics = drivers.get("top_topics", [])
+
+        # Resumen de las señales principales
+        signals_summary = []
+        for sig in evidence_signals[:3]:
+            topics_text = ", ".join([t["topic"] for t in sig["topics"][:2]]) if sig["topics"] else "general"
+            signals_summary.append(f"- {sig['title']} (Tópicos: {topics_text})")
+
+        prompt = f"""Genera un resumen CONCISO (2-3 oraciones) explicando por qué se generó esta alerta territorial:
+
+Territorio: {territory}
+Probabilidad de riesgo: {risk_prob:.1%}
+Confianza: {confidence:.1%}
+Tendencia: {trend}
+Anomalía detectada: {'Sí' if is_anomaly else 'No'}
+Número de señales (últimos 7 días): {num_signals}
+Sentimiento promedio: {avg_sentiment:.2f}
+Tópicos principales: {', '.join([t[0] for t in top_topics[:3]]) if top_topics else 'N/A'}
+
+Noticias recientes relacionadas:
+{chr(10).join(signals_summary)}
+
+IMPORTANTE:
+- Usa lenguaje claro y profesional
+- Enfócate en POR QUÉ es una alerta (no repitas los números)
+- Menciona los tópicos o eventos principales
+- Máximo 3 oraciones
+"""
+
+        if settings.ai_provider == "openai" and settings.openai_api_key:
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.openai_api_key)
+
+            response = client.chat.completions.create(
+                model=settings.openai_model or "gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Eres un analista territorial que genera resúmenes concisos de alertas."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=200,
+                temperature=0.3
+            )
+
+            return response.choices[0].message.content.strip()
+
+        elif settings.ai_provider == "anthropic" and settings.anthropic_api_key:
+            from anthropic import Anthropic
+            client = Anthropic(api_key=settings.anthropic_api_key)
+
+            response = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=200,
+                temperature=0.3,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            return response.content[0].text.strip()
+
+    except Exception as e:
+        print(f"⚠️ Error generando resumen IA: {e}")
+        return None
+
+    return None
 
 
 def _generate_detailed_explanation(
@@ -219,6 +309,17 @@ def run_alerts(db: Session, tenant_id: int) -> int:
                 evidence_signals=evidence_signals
             )
 
+            # Generar resumen con IA (opcional)
+            ai_summary = _generate_ai_summary(
+                territory=s.territory,
+                risk_prob=s.risk_prob,
+                confidence=s.confidence,
+                trend=s.trend,
+                is_anomaly=s.is_anomaly,
+                drivers=drivers,
+                evidence_signals=evidence_signals
+            )
+
             ev = AlertEvent(
                 tenant_id=tenant_id,
                 rule_id=r.id,
@@ -226,6 +327,8 @@ def run_alerts(db: Session, tenant_id: int) -> int:
                 prob=s.risk_prob,
                 confidence=s.confidence,
                 explanation=explanation,
+                ai_summary=ai_summary,
+                evidence_signals_json=json.dumps(evidence_signals),
                 dedup_window_key=dedup_key,
             )
             try:

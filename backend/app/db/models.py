@@ -143,6 +143,8 @@ class AlertEvent(Base):
     prob: Mapped[float] = mapped_column(Float)
     confidence: Mapped[float] = mapped_column(Float)
     explanation: Mapped[str] = mapped_column(Text, default="")
+    ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)  # Resumen generado por IA
+    evidence_signals_json: Mapped[str] = mapped_column(Text, default="[]")  # JSON array de señales de evidencia
     status: Mapped[str] = mapped_column(String(40), default="new")  # new|acked|closed
     dedup_window_key: Mapped[str] = mapped_column(String(20), default="", index=True)  # YYYY-MM-DD-HH para dedup por hora
 

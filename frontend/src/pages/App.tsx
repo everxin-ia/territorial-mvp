@@ -24,6 +24,16 @@ type AlertEvent = {
   prob: number;
   confidence: number;
   explanation: string;
+  ai_summary?: string | null;
+  evidence_signals?: {
+    id: number;
+    title: string;
+    url: string;
+    published_at?: string | null;
+    sentiment_score: number;
+    sentiment_label: string;
+    topics: { topic: string; score: number }[];
+  }[];
   triggered_at: string;
   status: string;
 };
@@ -333,9 +343,64 @@ export default function App() {
                     {" · "}
                     <span className="font-medium">Confianza:</span> {(a.confidence * 100).toFixed(1)}%
                   </div>
-                  <div className="text-xs text-slate-700 whitespace-pre-wrap mb-3">
-                    {a.explanation}
-                  </div>
+
+                  {/* Resumen generado por IA */}
+                  {a.ai_summary && (
+                    <div className="mb-3 p-3 bg-white rounded-lg border border-slate-200">
+                      <div className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                        <span>🤖</span>
+                        <span>RESUMEN (IA)</span>
+                      </div>
+                      <div className="text-sm text-slate-800">{a.ai_summary}</div>
+                    </div>
+                  )}
+
+                  {/* Evidencias (noticias) */}
+                  {a.evidence_signals && a.evidence_signals.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs font-semibold text-slate-600 mb-2">
+                        📰 EVIDENCIA ({a.evidence_signals.length} noticias)
+                      </div>
+                      <div className="space-y-2">
+                        {a.evidence_signals.slice(0, 3).map((sig, idx) => (
+                          <div key={sig.id} className="bg-white p-2 rounded border border-slate-200">
+                            <div className="text-xs text-slate-500 mb-1">
+                              Noticia {idx + 1} · {sig.published_at ? new Date(sig.published_at).toLocaleDateString() : "Fecha desconocida"}
+                              {sig.topics && sig.topics.length > 0 && (
+                                <span className="ml-2 text-slate-400">
+                                  ({sig.topics.slice(0, 2).map(t => t.topic).join(", ")})
+                                </span>
+                              )}
+                            </div>
+                            <a
+                              href={sig.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-700 hover:underline"
+                            >
+                              {sig.title}
+                            </a>
+                          </div>
+                        ))}
+                        {a.evidence_signals.length > 3 && (
+                          <div className="text-xs text-slate-500 text-center">
+                            + {a.evidence_signals.length - 3} noticias más
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Explicación detallada (colapsable) */}
+                  <details className="mb-3">
+                    <summary className="text-xs font-semibold text-slate-600 cursor-pointer hover:text-slate-800">
+                      Ver análisis detallado →
+                    </summary>
+                    <div className="text-xs text-slate-700 whitespace-pre-wrap mt-2 pl-3 border-l-2 border-slate-200">
+                      {a.explanation}
+                    </div>
+                  </details>
+
                   <button
                     onClick={() => setSelectedAlert(a.id)}
                     className="text-sm text-blue-600 hover:underline"

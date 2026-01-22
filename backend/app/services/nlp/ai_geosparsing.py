@@ -29,92 +29,433 @@ from app.data.chile_territories import CHILE_TERRITORIES
 # ---------------------------------------------------------------------
 
 CHILE_CUES = [
+    # País y gentilicio
     "chile",
     "chileno",
     "chilena",
-    "santiago",
+    "chilenos",
+    "chilenas",
+
+    # Ciudades principales
+    "santiago de chile",
+    "santiago chile",
     "valparaíso",
     "valparaiso",
     "concepción",
     "concepcion",
+    "temuco",
+    "puerto montt",
+    "antofagasta",
+    "iquique",
+    "arica",
+    "la serena",
+    "coquimbo",
+    "rancagua",
+    "talca",
+    "chillán",
+    "chillan",
+    "los ángeles",
+    "los angeles",
+    "osorno",
+    "valdivia",
+    "punta arenas",
+    "copiapó",
+    "copiapo",
+    "calama",
+    "viña del mar",
+    "vina del mar",
+
+    # Instituciones gubernamentales
     "carabineros",
     "pdi",
     "la moneda",
+    "palacio de la moneda",
     "seremi",
     "conaf",
     "sernageomin",
     "delegación presidencial",
     "delegacion presidencial",
     "gobierno regional",
+    "gore",
     "minsal",
     "minvu",
     "mop",
     "sernapesca",
+    "sii",
+    "servicio de impuestos internos",
+    "senado chile",
+    "cámara de diputados",
+    "camara de diputados",
+    "congreso nacional",
+    "tribunal constitucional",
+    "poder judicial chile",
+    "fiscalía nacional",
+    "fiscalia nacional",
+    "contraloría",
+    "contraloria",
+    "senapred",
+    "onemi",
+    "csirt chile",
+    "anci",
+    "superintendencia",
+    "cmf",
+    "comisión para el mercado financiero",
+    "banco central de chile",
+    "servel",
+    "servicio electoral",
+
+    # Términos administrativos chilenos
     "región",
     "region",
     "comuna",
+    "municipalidad",
+    "intendencia",
+
+    # Términos geográficos específicos
+    "cordillera de los andes chile",
+    "desierto de atacama",
+    "patagonia chilena",
+    "isla de pascua",
+    "rapa nui",
+    "archipiélago juan fernández",
+    "archipielago juan fernandez",
+    "estrecho de magallanes",
 ]
 
 FOREIGN_STRONG_CUES = [
+    # Sudamérica
+    "argentina",
+    "argentino",
     "argentina",
     "buenos aires",
-    "córdoba",
-    "cordoba",
-    "mendoza",
+    "baires",
+    "córdoba argentina",
+    "cordoba argentina",
+    "rosario",
+    "mendoza argentina",
+    "tucumán",
+    "tucuman",
+    "casa rosada",
     "perú",
     "peru",
+    "peruano",
+    "peruana",
     "lima",
+    "lima perú",
+    "lima peru",
     "arequipa",
+    "cusco",
+    "cuzco",
+    "trujillo perú",
     "bolivia",
+    "boliviano",
     "la paz",
-    "santa cruz",
+    "la paz bolivia",
+    "santa cruz bolivia",
+    "cochabamba",
+    "sucre bolivia",
     "brasil",
     "brazil",
+    "brasileño",
+    "brasileiro",
     "são paulo",
     "sao paulo",
     "rio de janeiro",
+    "brasília",
+    "brasilia",
+    "salvador de bahía",
+    "salvador de bahia",
+    "belo horizonte",
+    "fortaleza",
+    "recife",
+    "porto alegre",
     "uruguay",
+    "uruguayo",
     "montevideo",
+    "punta del este",
     "paraguay",
+    "paraguayo",
     "asunción",
     "asuncion",
+    "ciudad del este",
     "colombia",
+    "colombiano",
     "bogotá",
     "bogota",
     "medellín",
     "medellin",
+    "cali",
+    "barranquilla",
+    "cartagena colombia",
+    "bucaramanga",
+    "venezuela",
+    "venezolano",
+    "caracas",
+    "maracaibo",
+    "valencia venezuela",
+    "barquisimeto",
+    "ecuador",
+    "ecuatoriano",
+    "quito",
+    "guayaquil",
+    "cuenca ecuador",
+
+    # Norteamérica
     "méxico",
     "mexico",
+    "mexicano",
     "ciudad de méxico",
     "cdmx",
     "guadalajara",
+    "monterrey",
+    "puebla méxico",
+    "tijuana",
+    "cancún",
+    "cancun",
     "estados unidos",
     "eeuu",
     "u.s.",
     "usa",
+    "estadounidense",
     "new york",
+    "nueva york",
     "miami",
     "washington",
+    "washington dc",
+    "los angeles",
+    "chicago",
+    "houston",
+    "phoenix",
+    "philadelphia",
+    "san antonio",
+    "san diego",
+    "dallas",
+    "san francisco",
+    "seattle",
+    "boston",
+    "atlanta",
+    "las vegas",
+    "canadá",
+    "canada",
+    "canadiense",
+    "toronto",
+    "montreal",
+    "vancouver",
+    "ottawa",
+    "calgary",
+
+    # Europa
     "españa",
     "espana",
+    "español",
+    "espanol",
     "madrid",
+    "madrid españa",
     "barcelona",
+    "valencia españa",
+    "sevilla",
+    "zaragoza",
+    "málaga",
+    "malaga",
+    "bilbao",
     "francia",
+    "francés",
+    "frances",
     "parís",
     "paris",
+    "marsella",
+    "lyon",
+    "toulouse",
+    "niza",
     "reino unido",
+    "inglaterra",
+    "británico",
+    "britanico",
     "londres",
     "london",
-    "tailandia",
-    "camboya",
-    "armenia",
-    "azerbaiyán",
-    "azerbaiyan",
-    "caribe",
-    "lima",
-    "perú",
-    "peru"
+    "manchester",
+    "liverpool",
+    "birmingham",
+    "italia",
+    "italiano",
+    "roma",
+    "milán",
+    "milan",
+    "nápoles",
+    "napoles",
+    "turín",
+    "turin",
+    "florencia",
+    "venecia",
+    "alemania",
+    "alemán",
+    "aleman",
+    "berlín",
+    "berlin",
+    "múnich",
+    "munich",
+    "frankfurt",
+    "hamburgo",
+    "colonia",
+    "portugal",
+    "portugués",
+    "portugues",
+    "lisboa",
+    "oporto",
+    "países bajos",
+    "paises bajos",
+    "holanda",
+    "ámsterdam",
+    "amsterdam",
+    "rotterdam",
+    "bélgica",
+    "belgica",
+    "bruselas",
+    "amberes",
+    "suiza",
+    "suizo",
+    "ginebra",
+    "zúrich",
+    "zurich",
+    "berna",
+    "austria",
+    "austríaco",
+    "viena",
+    "salzburgo",
+    "grecia",
+    "griego",
+    "atenas",
+    "tesalónica",
+    "rusia",
+    "ruso",
+    "moscú",
+    "moscu",
+    "san petersburgo",
 
+    # Asia
+    "china",
+    "chino",
+    "pekín",
+    "pekin",
+    "beijing",
+    "shanghai",
+    "hong kong",
+    "japón",
+    "japon",
+    "japonés",
+    "japones",
+    "tokio",
+    "osaka",
+    "kioto",
+    "india",
+    "indio",
+    "nueva delhi",
+    "bombay",
+    "mumbai",
+    "bangalore",
+    "tailandia",
+    "tailandés",
+    "bangkok",
+    "camboya",
+    "camboyano",
+    "phnom penh",
+    "vietnam",
+    "vietnamita",
+    "hanoi",
+    "ho chi minh",
+    "saigón",
+    "saigon",
+    "corea del sur",
+    "coreano",
+    "seúl",
+    "seoul",
+    "busan",
+    "indonesia",
+    "indonesio",
+    "yakarta",
+    "jakarta",
+    "filipinas",
+    "filipino",
+    "manila",
+
+    # Medio Oriente
+    "israel",
+    "israelí",
+    "israeli",
+    "jerusalén",
+    "jerusalem",
+    "tel aviv",
+    "arabia saudita",
+    "arabia saudí",
+    "riad",
+    "yeda",
+    "emiratos árabes",
+    "emiratos arabes",
+    "dubái",
+    "dubai",
+    "abu dhabi",
+    "turquía",
+    "turquia",
+    "turco",
+    "estambul",
+    "ankara",
+    "irán",
+    "iran",
+    "iraní",
+    "irani",
+    "teherán",
+    "tehran",
+    "irak",
+    "iraquí",
+    "bagdad",
+
+    # África
+    "sudáfrica",
+    "sudafrica",
+    "sudafricano",
+    "johannesburgo",
+    "ciudad del cabo",
+    "pretoria",
+    "egipto",
+    "egipcio",
+    "el cairo",
+    "alejandría",
+    "alejandria",
+    "nigeria",
+    "nigeriano",
+    "lagos",
+    "abuja",
+    "kenia",
+    "keniano",
+    "nairobi",
+    "marruecos",
+    "marroquí",
+    "rabat",
+    "casablanca",
+
+    # Oceanía
+    "australia",
+    "australiano",
+    "sídney",
+    "sidney",
+    "sydney",
+    "melbourne",
+    "brisbane",
+    "perth",
+    "nueva zelanda",
+    "nueva zelandia",
+    "auckland",
+    "wellington",
+
+    # Otros
+    "caribe",
+    "puerto rico",
+    "cuba",
+    "habana",
+    "república dominicana",
+    "santo domingo",
+    "panamá",
+    "panama",
 ]
 
 
@@ -275,21 +616,68 @@ class AIGeoparser:
     # ------------------------------------------------------------------
 
     def _is_chile_related_heuristic(self, title: str, content: str, url: Optional[str] = None) -> bool:
+        """
+        Filtro mejorado para determinar si una noticia es relevante para Chile.
+        ESTRATEGIA CONSERVADORA: preferimos NO asignar territorios a evitar falsos positivos.
+
+        Reglas:
+        1. URL .cl fuerte → Chile (a menos que haya señal fuerte de país extranjero)
+        2. Palabras clave de Chile en título → Mayor peso
+        3. Si hay palabras clave extranjeras, requiere señales MUY claras de Chile
+        4. En caso de ambigüedad → NO asignar territorios
+        """
+        title_lower = title.lower()
+        content_lower = content.lower()
         full = f"{title}\n{content}".lower()
 
-        if _url_looks_chilean(url):
+        # 1. Verificar URL
+        url_is_chilean = _url_looks_chilean(url)
+
+        # 2. Buscar señales de Chile y países extranjeros
+        has_chile_in_title = _contains_any(title_lower, CHILE_CUES)
+        has_chile_in_content = _contains_any(content_lower, CHILE_CUES)
+        has_chile = has_chile_in_title or has_chile_in_content
+
+        has_foreign_in_title = _contains_any(title_lower, FOREIGN_STRONG_CUES)
+        has_foreign_in_content = _contains_any(content_lower, FOREIGN_STRONG_CUES)
+        has_foreign = has_foreign_in_title or has_foreign_in_content
+
+        # 3. Caso 1: URL chilena SIN señales extranjeras en título → Chile
+        if url_is_chilean and not has_foreign_in_title:
             return True
 
-        has_chile = _contains_any(full, CHILE_CUES)
-        has_foreign = _contains_any(full, FOREIGN_STRONG_CUES)
-
-        if has_chile:
+        # 4. Caso 2: Señales de Chile en título Y NO hay señales extranjeras en título → Chile
+        if has_chile_in_title and not has_foreign_in_title:
             return True
 
-        if (not has_chile) and has_foreign:
+        # 5. Caso 3: Señales extranjeras MUY fuertes (en título) → NO Chile
+        if has_foreign_in_title:
+            # Solo aceptar si hay señales MUY claras de Chile (palabra "chile" explícita)
+            chile_explicit = any(
+                term in title_lower for term in ["chile", "chileno", "chilena", "chilenos", "chilenas"]
+            )
+            if not chile_explicit:
+                return False
+
+        # 6. Caso 4: Señales de Chile en contenido pero también extranjeras → Requiere más evidencia
+        if has_chile_in_content and has_foreign_in_content:
+            # Solo aceptar si hay múltiples señales de Chile
+            chile_count = sum(1 for term in CHILE_CUES if term in full)
+            foreign_count = sum(1 for term in FOREIGN_STRONG_CUES if term in full)
+
+            # Requiere al menos 2x más señales de Chile que extranjeras
+            if chile_count < foreign_count * 2:
+                return False
+
+        # 7. Caso 5: Solo señales de Chile, sin extranjeras → Chile
+        if has_chile and not has_foreign:
+            return True
+
+        # 8. Caso 6: Solo señales extranjeras → NO Chile
+        if has_foreign and not has_chile:
             return False
 
-        # Ambiguo -> conservador: no asignar territorios chilenos
+        # 9. Por defecto: conservador → NO asignar
         return False
 
     async def _is_chile_related_ai(self, title: str, content: str) -> bool:

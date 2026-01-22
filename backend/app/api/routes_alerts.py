@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+import json
 from app.db.session import get_db
 from app.db.models import AlertRule, AlertEvent
 
@@ -18,6 +19,8 @@ def list_alert_events(tenant_id: int = Query(1), limit: int = Query(200, le=500)
         "prob": e.prob,
         "confidence": e.confidence,
         "explanation": e.explanation,
+        "ai_summary": e.ai_summary if hasattr(e, 'ai_summary') else None,
+        "evidence_signals": json.loads(e.evidence_signals_json) if hasattr(e, 'evidence_signals_json') and e.evidence_signals_json else [],
         "triggered_at": e.triggered_at,
         "status": e.status,
     } for e in events]
